@@ -2,6 +2,13 @@
 name: qianjin-sticker-pack
 description: "基于已有 IP 形象（qianjin-ip-design 风格角色 / 山海经神兽 / 用户参考图）生成成套表情包体系。支持工作/聊天/搞笑/情绪/日常/节日等多主题，每套默认 12 张静态表情，正方形 240×240 规范，输出完整英文提示词并一键生图、自动拼图预览。适用于微信/Telegram/Discord 表情包、品牌 IP 衍生品、社群运营素材。"
 version: "1.0"
+category: 设计创作
+platforms:
+  - workbuddy
+  - claude-code
+  - cursor
+  - windsurf
+  - codex
 author: qianjin
 tags:
   - sticker
