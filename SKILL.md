@@ -1,10 +1,10 @@
 ---
 name: qianjin-sticker-pack
-description: "基于已有 IP 形象（qianjin-ip-design 风格角色 / 山海经神兽 / 用户参考图）生成成套表情包体系。支持工作/聊天/搞笑/情绪/日常/节日等多主题，每套默认 12 张静态表情，正方形 240×240 规范，输出完整英文提示词并一键生图、自动拼图预览。适用于微信/Telegram/Discord 表情包、品牌 IP 衍生品、社群运营素材。"
-version: 1.0.0
+description: "动态表情包生成技能：把任意两张图片合成一张 240×240 的 GIF 动态表情包。支持 交替/淡入/滑入/弹入 四种动画模式，可一键把中文文案烤进底部，输出永久循环、可直接发到微信/Telegram/Discord 的 GIF。也支持先由 IP 形象生成两帧再合成。"
+version: 2.1.0
 slug: qianjin-sticker-pack
-displayName: 表情包生成器
-summary: "基于 IP 形象一键生成成套 240×240 静态表情包，覆盖工作/聊天/搞笑/情绪/日常/节日 6 大主题，每套 12 张，中文文案烤入图内。"
+displayName: 动态表情包生成器
+summary: "两张图 → 240×240 动态 GIF 表情包。四种动画模式（交替/淡入/滑入/弹入）+ 中文文案烤入，一键合成可发微信的动态表情。"
 license: MIT
 category: 设计创作
 platforms:
@@ -16,20 +16,20 @@ platforms:
 author: qianjin
 tags:
   - sticker
-  - emoji-pack
+  - gif
+  - dynamic-emoji
   - expression-pack
   - ip-design
-  - character-design
-  - prompt
-  - cartoon
+  - animation
 license: MIT
 ---
 
-# IP 表情包体系生成器 · qianjin-sticker-pack
+# 动态表情包生成器 · qianjin-sticker-pack v2
 
-> **输入一个 IP 形象 → 输出一整套主题表情包（默认 12 张静态、240×240 正方形、完整可复制英文提示词）→ 确认后一键生图并自动拼图预览。**
+> **输入两张图 → 输出一张 240×240 的 GIF 动态表情包（永久循环、可直发微信/Telegram/Discord）。**
+> 四种动画模式（交替 / 淡入 / 滑入 / 弹入），可选把中文文案烤进底部。
 
-本技能是 `qianjin-ip-design`（IP 设计）与 `qianjin-shanhaijing-pet`（神兽宠物）的**下游生产线**：上游负责"造出一个角色"，本技能负责"让这个角色活成一套能聊天的表情"。风格语言继承自 `qianjin-ip-design` 的 6 大风格 × 8 维体系，确保表情包与原始 IP 气质一致。
+本技能是 `qianjin-ip-design`（IP 设计）的**下游**：上游负责"造出一个角色 + 它的两个瞬间"，本技能负责"把这两个瞬间合成一张会动的表情"。如果你手里已经有两张现成图片（同一角色两种表情、或任何想做动静对比的两张图），直接进流程即可。
 
 ---
 
@@ -37,148 +37,119 @@ license: MIT
 
 | 项目 | 说明 |
 |------|------|
-| 输入 | ① IP 参考图（jpg/png，最推荐，一致性最强）或 ② IP 风格描述（如"萌系小狐狸" / 直接引用 ip-design 的某风格）或 ③ 神兽名（走 shanhaijing-pet 出图后再做表情） |
-| 输出 | 一整套表情包：**默认 12 张静态表情**，每张含「中文场景 + 推荐文案 + 完整英文提示词」；确认后生图并输出 240×240 PNG + 4×3 预览拼图 |
-| 主题 | 内置 6 大主题（见 `references/theme-library.md`）：工作 / 聊天 / 搞笑 / 情绪 / 日常 / 节日；每主题预置 12 个表情内容 |
-| 规范 | **正方形 240×240 px**、纯色/透明背景、静态、无图内文字（文字走后期合成，保证清晰）、同一角色跨张一致 |
-| 生图 | 调用 ImageGen（文生图 / 图生图）；有参考图时走 image-to-image，跨张一致性最佳 |
-| 拼图 | 用 `scripts/assemble.py`（Pillow）统一缩放 240×240、可选合成文案、拼 4×3 预览 |
+| 输入 | 两张图（jpg/png/webp）：**同一主体两个瞬间**最佳（两种表情 / 两个动作 / 前后对比） |
+| 输出 | **一张 240×240 GIF 动态表情包**，永久循环；可选带底部中文文案 |
+| 动画 | 4 种模式：`blink` 交替 / `fade` 淡入 / `slide` 滑入 / `pop` 弹入（见第二节） |
+| 合成 | 调用 `scripts/make_gif.py`（Pillow）统一裁切 240×240、按模式生成多帧、合成 GIF |
+| 文案 | 可选 `--caption`，中文白字+黑描边烤进底部，不画进源图（AI 画中文不稳，后期合成更清晰） |
+| 平台 | 微信 / Telegram / Discord / 飞书 表情均兼容（GIF、240 方、循环） |
 
-**输出语言规则**：提示词主体用英文（喂绘图模型），设计说明与文案用简体中文。
-
----
-
-## 二、核心流程（五步）
-
-```
-① 锁定 IP  →  ② 选主题&数量  →  ③ 生成 12 条提示词清单  →  ④ 用户确认  →  ⑤ 生图 + 拼图
-```
-
-### ① 锁定 IP（决定一致性策略）
-- **有参考图**：记录图片路径，后续走 image-to-image（把参考图作为 image 入参），提示词里用 `same character as the reference image` 锚定。→ 跨张一致性最强（推荐）。
-- **只有风格/描述**：从下表取对应风格的「风格前缀」写进每条提示词开头，固定角色外观。一致性靠文字锁，略弱于图生图。
-- **神兽名**：先按 `qianjin-shanhaijing-pet` 出一张该神兽的 Q 版萌宠图作为参考图，再走本流程。
-
-### ② 选主题 & 数量
-- 主题：工作 / 聊天 / 搞笑 / 情绪 / 日常 / 节日（可多选，每主题一套 12 张）。
-- 数量：默认 12 张/套；也支持 8 / 16 / 24（拼图网格会自适应）。
-
-### ③ 生成 12 条提示词清单
-- 从 `references/theme-library.md` 取该主题的 12 个表情（场景 + 中文文案 + 英文动作关键词）。
-- 套用下方「提示词模板」：风格前缀 + 该表情动作词 + 全局规范 + 负面词。
-- **整张清单先给用户看**（序号 / 场景 / 文案 / 提示词摘要），不急着生图。
-
-### ④ 用户确认
-- 用户可调整：替换某张文案、加减张数、改背景色、要不要图内文字。
-- 确认后才进入生图。
-
-### ⑤ 生图 + 拼图
-- 逐张调 ImageGen（有参考图走 image-to-image）。
-- 全部生成后调 `scripts/assemble.py`：缩放 240×240、可选叠文案、拼预览图。
-- 输出到用户工作区 `sticker-pack/<主题>/`（含 12 张 PNG + preview.png + captions.json）。
+**输出语言规则**：脚本参数与提示词用英文/拼音思路喂给绘图模型；说明与文案用简体中文。
 
 ---
 
-## 三、风格前缀表（继承自 qianjin-ip-design 六风格）
-
-> 仅当用户**未提供参考图**、只用风格描述时，把对应前缀写进每条提示词开头，固定角色外观。
-
-| 风格 | 风格前缀（EN，写进每条提示词开头） |
-|------|------|
-| 萌系 | cute chibi character, big head small body (2-3 head ratio), huge sparkly eyes, pastel macaron colors, round fluffy shapes, soft vinyl toy texture |
-| 潮酷系 | cool street-style character, edgy outfit with bold accessories, asymmetrical pose, high-contrast colors, confident attitude |
-| 国风系 | Chinese-style character, elegant traditional clothing, refined facial features, traditional color palette (cinnabar/azure/jade), flowing lines, dignified aura |
-| 极简系 | minimalist flat character, geometric shapes, limited color palette (≤3 colors), simple clean lines, bold silhouette |
-| 暗黑系 | dark gothic character, sharp contours, deep shadows, eerie glow accents, mysterious and intimidating aura |
-| 治愈系 | healing-style cozy character, round soft body, warm cream tones, gentle half-closed eyes, omega-shaped smile, fluffy texture |
-
-> 若用户给了具体描述（如"戴眼镜的橘猫程序员"），用描述代替上表，但保持"固定外观"原则——所有 12 张用同一段角色描述。
-
----
-
-## 四、提示词模板与全局规范
-
-### 4.1 文生图模板（无参考图）
+## 二、四步流程
 
 ```
-{风格前缀}, {本表情英文动作关键词}, sticker design, square composition, clean solid color background or transparent background, isolated subject, flat vector illustration style, bold clean outline, no text, no watermark, no signature, full character visible, centered, high contrast, simple shapes, easy to read at small size, static pose, no motion blur
+① 准备两图  →  ② 选动画模式  →  ③ (可选) 定文案  →  ④ 跑 make_gif.py 出 GIF
 ```
 
-### 4.2 图生图模板（有参考图，推荐）
+### ① 准备两图（核心：两帧要"同一主体"）
+- **最推荐**：同一角色/IP 的两种瞬间（如笑脸↔哭脸、正常↔炸毛、闭眼↔睁眼）。动态表情的灵魂就是"动那一下"。
+- **对比类**：前后状态（干净↔脏乱、满杯↔空杯），适合"打脸/吐槽"梗。
+- 两张图**尽量已接近正方形、主体居中**；脚本会自动居中裁切/缩放成 240×240（可用 `--fit contain` 避免裁掉边缘）。
+- 若你**没有现成图**，见 `references/frame-prompt-guide.md`，用 ImageGen 先出两帧（同一角色两种表情），再回来合成。
 
-```
-same character as the reference image, {本表情英文动作关键词}, sticker design, square composition, clean solid color background or transparent background, isolated subject, flat vector illustration style, bold clean outline, no text, no watermark, no signature, full character visible, centered, high contrast, simple shapes, easy to read at small size, static pose, no motion blur
-```
+### ② 选动画模式
 
-### 4.3 全局规范（每条必须包含，保证"一套表情"的统一感）
-- **正方形**：`square composition` + 生图时指定 1:1 比例。
-- **抠图友好**：`clean solid color background or transparent background, isolated subject, easy to cutout`。
-- **贴纸感**：`sticker design, flat vector illustration style, bold clean outline`（描边让小尺寸也清晰）。
-- **静态**：`static pose, no motion blur`（表情包要瞬间可读）。
-- **无图内文字**：`no text, no watermark, no signature`——文案走 `assemble.py` 后期合成，中文更清晰可控。
-- **小尺寸可读**：`simple shapes, high contrast, easy to read at small size`。
+| 模式 | 效果 | 最像什么 | 默认节奏 |
+|------|------|----------|----------|
+| `blink` | A ↔ B 乒乓交替 | 微信"变脸/打脸"表情、眨眼 | 每帧 420ms |
+| `fade` | A 与 B 交叉溶解 | 柔和过渡、氛围感 | 8fps，6 中间帧 |
+| `slide` | B 从某方向滑入盖住 A 再滑出 | 卡片翻面、弹幕划过 | 8fps，6 中间帧 |
+| `pop` | B 从中心由小放大"砰"弹出再缩回 | 强调、震惊、点题 | 8fps，6 中间帧 |
 
-### 4.4 负面词（Negative，生图时附加）
-```
-text, words, letters, watermark, signature, logo, complex background, photo, realistic, 3d render, blurry, low quality, extra limbs, deformed, partial, cropped
-```
-> 注意：用户要的是"贴纸风"表情，默认走 2D 扁平插画；若用户明确要 3D 盲盒风表情，去掉 `3d render` 负面词并改 `flat vector` 为 `3d chibi blind-box figure`。
+> 全部用**往返（ping-pong）**实现无缝循环，不会在 A↔B 衔接处"跳帧"。
 
----
+### ③（可选）定文案
+- 给一句短中文（≤6 字最佳），如"你礼貌吗""我裂开""退退退"。
+- 用 `--caption` 烤进 240×240 底部（白字+黑描边，微信风）。参考 `references/caption-library.md` 取梗。
+- 不要字就省略该参数。
 
-## 五、文案合成（关键：中文清晰）
-
-表情包文案**不画进生成图里**（AI 画中文极不稳定），而是用 `scripts/assemble.py` **烤进 240×240 贴纸内部**（白字 + 黑描边，紧贴底部，像微信表情包那样）：
-
-- 每张表情对应一条中文文案（来自 theme-library 默认或用户自定），存 `captions.json`：`{"01.png":"收到，马上改","02.png":"我还能肝",...}`。
-- `assemble.py` 默认把文案**烤进图内**（`bake_caption`：白字 + 黑描边宽 3、自动字号 16-42px、距底部约 10px、水平居中），可直接发到微信/社交平台。
-- 字体：优先 `msyhbd.ttc`（微软雅黑 Bold）→ `msyh.ttc` → `simhei`，未找到回退 PIL 默认。
-- 若用户要"纯图无字"表情，加 `--no-text` 参数即可跳过烤字。
-
----
-
-## 六、生图与拼图调用
-
-### 6.1 生图（ImageGen）
-- 逐张调用，有参考图时传 `image` 参数（参考图路径），`prompt` 用图生图模板。
-- 12 张建议分 2 批（每批 6 张）串行生成，避免超时；单张约 5-10 credits，先告知用户成本。
-- **防覆盖提示**：ImageGen 默认按时间戳命名输出文件，若多张图在同一秒完成可能重名覆盖。稳妥做法是为每张表情指定独立子目录（如 `output/01/`、`output/02/`），生成后再统一收集。
-
-### 6.2 拼图（assemble.py）
+### ④ 跑 make_gif.py
 ```bash
-# 默认：文案烤进 240×240 贴纸内部 + 拼预览
-python scripts/assemble.py --input <生图目录> --output <输出目录> --captions captions.json
+# 默认：blink 交替 + 文案
+python scripts/make_gif.py --img1 a.png --img2 b.png --output out.gif --caption "你礼貌吗"
 
-# 只要纯图贴纸（不烤字）
-python scripts/assemble.py --input <生图目录> --output <输出目录> --captions captions.json --no-text
+# 淡入过渡（无字）
+python scripts/make_gif.py --img1 a.png --img2 b.png --mode fade --output out.gif
 
-# 自定义网格（如 24 张用 6×4）
-python scripts/assemble.py --input <生图目录> --output <输出目录> --cols 6 --rows 4
+# 滑入：从上方滑进
+python scripts/make_gif.py --img1 a.png --img2 b.png --mode slide --direction top --output out.gif
+
+# 弹入强调
+python scripts/make_gif.py --img1 a.png --img2 b.png --mode pop --caption "我裂开" --output out.gif
 ```
+> 运行前需 Pillow：`pip install Pillow`（或技能自带的隔离 venv）。详见 `scripts/requirements.txt`。
 
-输出：
-- `output/pack/`：N 张 240×240 PNG（贴纸本体，默认含烤字）
-- `output/preview.png`：拼图预览（每格展示烤好字的贴纸 + 左上角序号）
+输出即一张 `out.gif`，240×240、永久循环，可直接拖进微信表情添加。
 
 ---
 
-## 七、示例（工作表情包 · 萌系小狐狸，有参考图）
+## 三、make_gif.py 参数速查
 
-> 参考图：`fox_ref.png`（一只萌系橘狐 IP）
-
-**第 3 张「加班」提示词（图生图）**
-```
-same character as the reference image, looking exhausted with droopy eyes and a tiny sweat drop, holding a coffee cup, sticker design, square composition, clean solid color background or transparent background, isolated subject, flat vector illustration style, bold clean outline, no text, no watermark, no signature, full character visible, centered, high contrast, simple shapes, easy to read at small size, static pose, no motion blur
-```
-**中文文案**：`我还能肝`
-**负面词**：text, words, letters, watermark, signature, complex background, photo, realistic, blurry, low quality, extra limbs, deformed
-
-生成 12 张后拼图，得到一套可发的「打工人狐狸」表情包。
+| 参数 | 默认 | 说明 |
+|------|------|------|
+| `--img1` / `--img2` | 必填 | 两张源图路径 |
+| `--output` | `dynamic_sticker.gif` | 输出 GIF 路径 |
+| `--size` | `240` | 输出边长（正方形） |
+| `--mode` | `blink` | `blink`/`fade`/`slide`/`pop` |
+| `--caption` | 空 | 底部中文文案（白字+黑描边） |
+| `--bg` | `255,255,255` | 合成背景色 R,G,B（过渡类模式需落底） |
+| `--transparent` | 关 | 输出透明 GIF（仅 blink 边缘干净；过渡类半透明会被硬处理） |
+| `--fit` | `cover` | `cover`=居中裁切铺满 / `contain`=完整内嵌（防裁切用 contain） |
+| `--fps` | `8` | 过渡类（fade/slide/pop）帧率 |
+| `--duration` | `420` | blink 每帧毫秒 |
+| `--loops` | `6` | 过渡类中间帧数（越大越顺滑，也越大体积） |
+| `--direction` | `right` | slide 滑入方向：right/left/top/bottom |
+| `--no-pingpong` | 关 | 过渡类不往返（直接跳回首帧，可能轻微跳帧） |
 
 ---
 
-## 八、版本记录
+## 四、如何生成"两帧"（无现成图时）
+
+完整提示词规范见 `references/frame-prompt-guide.md`，要点：
+- 两帧**必须同一角色**：有参考图走 image-to-image（`same character as the reference image`），跨帧一致性最强。
+- 提示词结构：`风格前缀 + 本帧动作/表情关键词 + 贴纸规范 + 负面词`。
+- 两帧只改"表情/动作"那一段，其余（角色、背景、画风）完全锁死，保证合成后只是"动了一下"。
+- 规范里务必带 `square composition`、`no text`、`static pose`（动效由脚本做，不用 AI 画运动模糊）。
+- **⚠️ ImageGen 水印坑**：本机 ImageGen 会在图右下角加 "AI生成 / WORKBUDDY" 水印，直接合成会被裁进贴纸，必须在合成前清洗。水印有两种形态，位置固定在约 (0.88w, 0.93h)-(1.0, 1.0)：
+  - 深色水印（早期）：文字暗于背景，按行采样水印左侧背景色横向覆盖即可，参考 `pingtouge\build_pack.py` 的 `clean_watermark()`。
+  - 白色水印（2026-09 后）：白色半透明文字压在纯色底上，**不能整块涂背景色**（会误伤画面内容，如地面红线）。用两段式掩码清洗：① `g > bg_g+10` 抓白字核心与亮过渡；② 强清洗抓极淡 AA 残影（各通道与背景差 5~15，且 `r≈bg_r、g>bg_g-6、b>bg_b-12`，深红内容 g/b 远低天然排除）；掩码膨胀 1px 后填回区域内背景众数色。参考实现 `panda\build_panda.py` 的 `clean_watermark()`。
+- **⚠️ ImageGen 并行撞名坑**：批量生成多张动作帧时**必须串行逐张调用**（一次一条消息只发一个生成请求）。并行调用时工具会把所有结果 funnel 进同一个目录，且文件名按秒级时间戳生成——同秒完成的两张图会同名互相覆盖，静默丢图且无任何报错。已实测：6 张并行丢 3 张、8 张并行丢 2 张。串行时 `output_dir` 参数才会被正确尊重。丢图后靠"清点文件数 + 逐张看图比对提示词"找回归属。
+  - 2026-09 实测补充：同一条消息里并行 3-4 发、各调用恰好落秒不同时可以全部存活，但 `output_dir` 仍被忽略（全部漏斗到最后一个指定目录）→ 并行发之后必须以返回的 `localPath` 为准并核对数量；想稳妥仍走串行。
+  - **构图锁死坑**：`input_fidelity=high` 会把整张构图锁得很死，普通 "NEW POSE" 提示只会让角色挪挪手、构图照旧。要出新动作姿势，提示词必须用 "COMPLETELY NEW COMPOSITION, totally different from the reference" 级别的强指令 + 具体描述火箭与角色的相对位置。6 发强指令实测约一半真正突破。
+
+---
+
+## 五、进阶：分层动画（让画面里的"道具"动起来）
+
+blink 双帧合成只能换"整张图"，画面里的静态元素（火箭、灯泡、篝火等）不会动。让**局部元素动**的方法是拆图层：
+
+1. **主图**：ImageGen 生成/图生图出主场景，为动效元素**预留空间**（如火箭喷口下方留空白）。
+2. **动效贴片**：串行生成 N 张该元素的独立贴片（纯白底 + 与主图同风格 + 不同强度档位，如火焰小/中/大）。**必须串行**（见下方并行坑）。
+3. **白底抠透明**：四角+边中点 `ImageDraw.floodfill(thresh≈45)` 泛洪白底 → 透明，再清 2 轮贴边白色光晕（与透明区相邻且近白的像素置透明），`getbbox()` 裁剪。**不能用全局白色阈值抠**——会吃掉元素内部的白色高光/白芯。
+4. **合成循环帧**：每帧按锚点粘贴不同档位贴片（横向 ±10px 摆动更活），走 bake_caption + save_gif 出 GIF。
+5. **文案让位**：动效区在底部时，把烤字 bottom 边距抬高（参考 `bake_caption_high`），避免文字压住动效。
+
+参考实现：`panda\rocket_anim\build_rocket_anim.py`（熊猫抱火箭 + 喷焰三档循环，火焰 rotate 对齐倾斜中轴）。
+
+---
+
+## 六、版本记录
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
-| v1.0 | 2026-08-02 | 初始版本：6 主题×12 表情内容库 + 风格一致性前缀 + 240 方图规范 + 提示词模板 + assemble.py 拼图脚本 |
+| v1.0 | 2026-08-02 | 初始：6 主题×12 静态表情 + 240 方图规范 + assemble.py 拼图 |
+| v2.0 | 2026-09-16 | **重构为动态表情包**：两张图 → 240×240 GIF；新增 make_gif.py，支持 blink/fade/slide/pop 四模式 + 文案烤入 + 透明 GIF；移除静态 12 张流水线 |
+| v2.1 | 2026-09-16 | 新增**分层动画**方法论：静态道具拆独立图层（白底贴片→泛洪抠透明→多档位循环合成），让画面局部元素（喷焰等）动起来；文案抬高让位动效区 |

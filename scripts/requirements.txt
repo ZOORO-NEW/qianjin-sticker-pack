@@ -1,0 +1,6 @@
+# qianjin-sticker-pack 依赖
+# 运行 scripts/make_gif.py 前安装：
+#   pip install Pillow
+# 或在本机隔离 venv 中安装（推荐）：
+#   python -m venv .venv && .venv/Scripts/pip install Pillow
+Pillow>=10.0
