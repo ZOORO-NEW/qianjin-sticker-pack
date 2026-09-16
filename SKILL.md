@@ -1,7 +1,7 @@
 ---
 name: qianjin-sticker-pack
 description: "动态表情包生成技能：把任意两张图片合成一张 240×240 的 GIF 动态表情包。支持 交替/淡入/滑入/弹入 四种动画模式，可一键把中文文案烤进底部，输出永久循环、可直接发到微信/Telegram/Discord 的 GIF。也支持先由 IP 形象生成两帧再合成。"
-version: 2.1.0
+version: 2.1.1
 slug: qianjin-sticker-pack
 displayName: 动态表情包生成器
 summary: "两张图 → 240×240 动态 GIF 表情包。四种动画模式（交替/淡入/滑入/弹入）+ 中文文案烤入，一键合成可发微信的动态表情。"
