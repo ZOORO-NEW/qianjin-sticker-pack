@@ -7,12 +7,7 @@ displayName: 动态表情包生成器
 summary: "两张图 → 240×240 动态 GIF 表情包。四种动画模式（交替/淡入/滑入/弹入）+ 中文文案烤入，一键合成可发微信的动态表情。"
 license: MIT
 category: 设计创作
-platforms:
-  - workbuddy
-  - claude-code
-  - cursor
-  - windsurf
-  - codex
+platforms: [workbuddy, claude-code, cursor, windsurf, codex, linux, macos, windows]
 author: qianjin
 tags:
   - sticker
@@ -21,7 +16,6 @@ tags:
   - expression-pack
   - ip-design
   - animation
-license: MIT
 ---
 
 # 动态表情包生成器 · qianjin-sticker-pack v2
